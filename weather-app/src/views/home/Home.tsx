@@ -4,17 +4,12 @@ import {
   GetHourlyWidget,
   GetKakaoMapWidget,
   GetTodayHighlightsWidget,
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  GetDayItem,
+  GetWeekWidget,
 } from "@/components";
 
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { Weather, ForecastTideDay } from "@/types";
+import { Weather, ForecastTideDay, ForecastDay } from "@/types";
 
 const defaultWeatherData: Weather = {
   current: {
@@ -107,6 +102,7 @@ const defaultTideData: ForecastTideDay = {
 function HomePage() {
   const [weatherData, setWeatherData] = useState(defaultWeatherData);
   const [tideData, setTideData] = useState(defaultTideData);
+  const [oneWeekWeatherSummary, setOneWeekWeatherSummary] = useState([]);
 
   const fetchApi = async (localName: string) => {
     const API_KEY = "6d5e35ad77bf45e599205106241411";
@@ -140,10 +136,38 @@ function HomePage() {
     }
   };
 
+  const getOneWeekWeather = async () => {
+    const API_KEY = "6d5e35ad77bf45e599205106241411";
+    const BASE_URL = `https://api.weatherapi.com/v1/marine.json?q=seoul&days=7&key=${API_KEY}`;
+
+    try {
+      const res = await axios.get(BASE_URL);
+
+      if (res.status === 200 && res.data) {
+        console.log(res.data.forecast.forecastday);
+        const newData = res.data.forecast.forecastday.map(
+          (item: ForecastDay) => {
+            return {
+              maxTemp: Math.round(item.day.maxtemp_c),
+              minTemp: Math.round(item.day.mintemp_c),
+              date: item.date,
+              iconCode: item.day.condition.code,
+              isDay: item.day.condition.icon.includes("day"),
+            };
+          }
+        );
+        setOneWeekWeatherSummary(newData);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   // 빈배열이 들어가면 컴포넌트가 마운트 될 때 한번만 실행이 된다
   useEffect(() => {
     fetchApi("seoul");
     fetchTideApi();
+    getOneWeekWeather();
   }, []);
 
   return (
@@ -163,23 +187,7 @@ function HomePage() {
               currentData={weatherData}
               tideData={tideData}
             />
-            <Card className="w-1/4 h-full">
-              <CardHeader>
-                <CardTitle>7 Days</CardTitle>
-                <CardDescription>
-                  이번주 날씨를 조회하고 있습니다.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-1">
-                <GetDayItem highTemp={20} lowTemp={10} />
-                <GetDayItem highTemp={20} lowTemp={10} />
-                <GetDayItem highTemp={20} lowTemp={10} />
-                <GetDayItem highTemp={20} lowTemp={10} />
-                <GetDayItem highTemp={20} lowTemp={10} />
-                <GetDayItem highTemp={20} lowTemp={10} />
-                <GetDayItem highTemp={20} lowTemp={10} />
-              </CardContent>
-            </Card>
+            <GetWeekWidget data={oneWeekWeatherSummary} />
           </div>
         </div>
       </div>

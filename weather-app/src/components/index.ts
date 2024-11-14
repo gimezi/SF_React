@@ -26,3 +26,4 @@ export { SearchBar } from "./ui/search-bar";
 
 export { GetSunriseAndSunset } from "./home/GetSunriseAndSunset";
 export { GetWavesWidget } from "./home/GetWavesWidget";
+export { GetWeekWidget } from "./home/GetWeekWidget";
