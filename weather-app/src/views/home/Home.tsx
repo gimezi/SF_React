@@ -144,7 +144,6 @@ function HomePage() {
       const res = await axios.get(BASE_URL);
 
       if (res.status === 200 && res.data) {
-        console.log(res.data.forecast.forecastday);
         const newData = res.data.forecast.forecastday.map(
           (item: ForecastDay) => {
             return {
