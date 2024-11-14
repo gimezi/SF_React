@@ -7,8 +7,13 @@ import {
   Separator,
 } from "@/components";
 import { CalendarDays, MapPinned } from "lucide-react";
+import { Weather } from "@/types";
 
-function GetTodayWidget() {
+interface Props {
+  data: Weather;
+}
+
+function GetTodayWidget({ data }: Props) {
   return (
     <Card className="w-1/4 min-w-[25%]">
       <CardHeader>
@@ -26,7 +31,7 @@ function GetTodayWidget() {
             />
             <div className="w-full flex items-start gap-1">
               <span className="poppins-bold scroll-m-20 text-6xl font-extrabold tracking-tight">
-                20
+                {data.current.dewpoint_c}
               </span>
               <span className="text-4xl font-extrabold">&#8451;</span>
             </div>
