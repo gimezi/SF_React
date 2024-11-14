@@ -38,11 +38,7 @@ export interface ForecastTideDay {
     totalprecip_mm: number;
     totalsnow_cm: number;
     uv: number;
-    tides: [
-      {
-        tide: Tide[];
-      },
-    ];
+    tides: { tide: Tide[] }[] | [];
   };
   hour: HourlyData[];
 }
@@ -169,4 +165,12 @@ export interface Tide {
   tide_height_mt: string;
   tide_time: string;
   tide_type: string;
+}
+
+export interface WeatherInfo {
+  maxTemp: number;
+  minTemp: number;
+  date: number;
+  iconCode: number;
+  isDay: boolean;
 }
