@@ -97,7 +97,7 @@ function HomePage() {
           {/* 상단 3개의 위젯 */}
           <div className="w-full flex items-center gap-5">
             <GetTodayWidget data={weatherData} />
-            <GetHourlyWidget />
+            <GetHourlyWidget data={weatherData.forecast.forecastday[0]} />
             <GetKakaoMapWidget />
           </div>
           {/* 하단 2개의 위젯 */}
