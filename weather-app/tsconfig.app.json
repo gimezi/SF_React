@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "incremental": true, // incremental 옵션을 추가
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "target": "ES2020",
     "useDefineForClassFields": true,
@@ -20,9 +21,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true,
 
-    /* shadcn UI */
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
