@@ -7,8 +7,30 @@ import {
   GetSunriseAndSunset,
   GetWavesWidget,
 } from "@/components";
+import { Weather, ForecastTideDay, Tide } from "@/types";
 
-function GetTodayHighlightsWidget() {
+interface Props {
+  currentData: Weather;
+  tideData: ForecastTideDay;
+}
+
+function GetTodayHighlightsWidget({ currentData, tideData }: Props) {
+  if (!currentData || !tideData) {
+    <div>데이터를 불러오는 중입니다..</div>;
+  }
+
+  const tideTimesWithUnits = tideData.day.tides[0].tide.map((item: Tide) => {
+    const [, hourString] = item.tide_time.split(" ");
+    const [hour] = hourString.split(":").map(Number);
+    const formattedUnit = hour < 12 ? "am" : "pm";
+
+    return {
+      displayTime: item.tide_time.split(" ")[1],
+      unit: formattedUnit,
+      type: item.tide_type,
+    };
+  });
+
   return (
     <Card className="flex-1">
       <CardHeader>
@@ -31,15 +53,21 @@ function GetTodayHighlightsWidget() {
             <CardContent className="w-full flex items-center justify-between">
               <img src="src/assets/icons/Waves.png" alt="" className="h-14" />
               <div className="w-fit grid grid-cols-4 gap-3">
-                <div className="flex flex-col items-center">
-                  {/* 몇회 만조/간조 표시 영역 */}
-                  <p className="text-sm text-muted-foreground">1회 - 만조</p>
-                  {/* 시간 표시 영역 */}
-                  <p className="poppins-medium scroll-m-20 text-lg font-semibold tracking-tight">
-                    05:48
-                    <span className="ml-[1px]">am</span>
-                  </p>
-                </div>
+                {tideTimesWithUnits.map((tide, index) => {
+                  return (
+                    <div className="flex flex-col items-center" key={index}>
+                      {/* 몇회 만조/간조 표시 영역 */}
+                      <p className="text-sm text-muted-foreground">
+                        {index + 1}회 - {tide.type === "HIGH" ? "만조" : "간조"}
+                      </p>
+                      {/* 시간 표시 영역 */}
+                      <p className="poppins-medium scroll-m-20 text-lg font-semibold tracking-tight">
+                        {tide.displayTime}
+                        <span className="ml-[1px]">{tide.unit}</span>
+                      </p>
+                    </div>
+                  );
+                })}
                 <div className="flex flex-col items-center">
                   {/* 몇회 만조/간조 표시 영역 */}
                   <p className="text-sm text-muted-foreground">1회 - 만조</p>
