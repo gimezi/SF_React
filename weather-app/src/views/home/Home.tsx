@@ -8,6 +8,8 @@ import {
 } from "@/components";
 
 import { useEffect, useState } from "react";
+import { useAtom } from "jotai";
+import { cityNameAtom } from "@/stores";
 import { Weather, ForecastTideDay, WeatherInfo } from "@/types";
 import { getWeather, getTideWeather, getOneWeekWeather } from "@/api";
 import defaultValue from "@/assets/defaultValue.json";
@@ -22,18 +24,20 @@ function HomePage() {
     WeatherInfo[]
   >([]);
 
+  const [cityName] = useAtom(cityNameAtom);
+
   const fetchData = async () => {
-    const fetchedWeatherData = await getWeather("seoul");
+    const fetchedWeatherData = await getWeather(cityName);
     if (fetchedWeatherData) {
       setWeatherData(fetchedWeatherData);
     }
 
-    const fetchedTideData = await getTideWeather();
+    const fetchedTideData = await getTideWeather(cityName);
     if (fetchedTideData) {
       setTideData(fetchedTideData);
     }
 
-    const fetchedOneWeekData = await getOneWeekWeather();
+    const fetchedOneWeekData = await getOneWeekWeather(cityName);
     if (fetchedOneWeekData) {
       setOneWeekWeatherSummary(fetchedOneWeekData);
     }
@@ -42,7 +46,7 @@ function HomePage() {
   // 빈배열이 들어가면 컴포넌트가 마운트 될 때 한번만 실행이 된다
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [cityName]);
 
   return (
     <div className="page">

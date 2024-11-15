@@ -1,10 +1,15 @@
 import { Map, MapMarker } from "react-kakao-maps-sdk";
 import useKakaoLoader from "@/hooks/useKakaoLoader";
 import { Card } from "@/components";
+import { useAtom } from "jotai";
+import { cityNameAtom } from "@/stores";
 
 function GetKakaoMapWidget() {
   useKakaoLoader();
-
+  const [, setCityName] = useAtom(cityNameAtom);
+  const handleClick = (inputCityName: string) => {
+    setCityName(inputCityName);
+  };
   const positions = [
     {
       cityName: "seoul",
@@ -73,7 +78,7 @@ function GetKakaoMapWidget() {
               }}
               title={position.cityName}
               clickable={true}
-              onClick={(marker) => console.log(marker.getTitle())}
+              onClick={() => handleClick(position.cityName)}
             />
           );
         })}

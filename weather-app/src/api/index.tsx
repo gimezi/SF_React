@@ -20,10 +20,12 @@ const getWeather = async (localName: string): Promise<Weather | undefined> => {
   }
 };
 
-const getTideWeather = async (): Promise<ForecastTideDay | undefined> => {
+const getTideWeather = async (
+  localName: string
+): Promise<ForecastTideDay | undefined> => {
   try {
     const res = await axios.get(
-      `${BASE_URL}/marine.json?q=seoul&days=1&key=${API_KEY}`
+      `${BASE_URL}/marine.json?q=${localName}&days=1&key=${API_KEY}`
     );
 
     if (res.status === 200) {
@@ -34,10 +36,12 @@ const getTideWeather = async (): Promise<ForecastTideDay | undefined> => {
   }
 };
 
-const getOneWeekWeather = async (): Promise<WeatherInfo[] | undefined> => {
+const getOneWeekWeather = async (
+  localName: string
+): Promise<WeatherInfo[] | undefined> => {
   try {
     const res = await axios.get(
-      `${BASE_URL}/marine.json?q=seoul&days=7&key=${API_KEY}`
+      `${BASE_URL}/marine.json?q=${localName}&days=7&key=${API_KEY}`
     );
 
     if (res.status === 200 && res.data) {
