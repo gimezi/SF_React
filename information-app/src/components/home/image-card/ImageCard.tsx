@@ -9,7 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  Skeleton,
 } from "@/components/ui";
 import {
   AlignLeft,
@@ -18,8 +17,56 @@ import {
   Heart,
   Pin,
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { ImageDataType } from "@/types";
 
-function ImageCard() {
+interface Props {
+  data: ImageDataType;
+}
+
+function ImageCard({ data }: Props) {
+  const { toast } = useToast();
+  const addBookmark = (imageData: ImageDataType) => {
+    console.log(imageData);
+
+    const getLocalStorage = localStorage.getItem("bookmark");
+    let bookmarks: ImageDataType[] = [];
+
+    if (getLocalStorage) {
+      try {
+        bookmarks = JSON.parse(getLocalStorage);
+      } catch (error) {
+        console.error("Error parsing localStorage:", error);
+        bookmarks = [];
+      }
+    }
+
+    if (bookmarks.length === 0) {
+      localStorage.setItem("bookmark", JSON.stringify([imageData]));
+      toast({
+        title: "로컬스토리지에 올바르게 저장되었습니다.",
+      });
+    } else {
+      const imageExists =
+        bookmarks.findIndex((item: ImageDataType) => item.id === imageData.id) >
+        -1;
+
+      if (imageExists) {
+        toast({
+          variant: "destructive",
+          title: "로컬스토리지에 해당 데이터가 이미 저장되어 있습니다.",
+        });
+      } else {
+        bookmarks.push(imageData);
+        localStorage.setItem("bookmark", JSON.stringify(bookmarks));
+
+        toast({
+          title: "로컬스토리지에 올바르게 저장되었습니다.",
+        });
+      }
+    }
+  };
+
   return (
     <div className="flex flex-col justify-between space-y-3 w-64 h-64 cursor-pointer">
       <div className="relative flex flex-col gap-3">
@@ -40,63 +87,77 @@ function ImageCard() {
               </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col items-center space-x-2 gap-3">
-              <Skeleton className="h-80 w-full rounded-xl" />
-              <div className="flex items-center justify-start w-full">
+              {/* Skeleton UI: 이미지 데이터가 렌더링 되기 전 */}
+              {/* <Skeleton className="h-80 w-full rounded-xl" /> */}
+              {/* 이미지 데이터가 렌더링 된 후 */}
+              <img
+                src={data.urls.full}
+                alt=""
+                className="h-80 w-full rounded-xl object-cover"
+              />
+              <div className="flex items-center justify-between w-full">
                 <div className="flex items-center gap-2">
                   <Avatar>
                     <AvatarImage
-                      src="https://github.com/shadcn.png"
+                      src={data.user.profile_image.small}
                       alt="@shadcn"
                     />
                     <AvatarFallback>CN</AvatarFallback>
                   </Avatar>
                   <small className="text-sm font-medium leading-none">
-                    스나이퍼팩토리
+                    {data.user.username}
                   </small>
                 </div>
+                <Button variant={"secondary"} onClick={() => addBookmark(data)}>
+                  북마크 추가
+                </Button>
               </div>
               <div className="flex flex-col w-full gap-2">
                 <div className="flex items-center">
-                  <Pin className="h-4 w-4 mt-[2px] mr-1" />
-                  <span className="text-sm">
-                    등대-근처의-한인-주택-JrUPwkbIIx8
-                  </span>
+                  <Pin className="h-4 w-4 min-w-4 mt-[2px] mr-1" />
+                  <span className="text-sm">{data.alternative_slugs.ko}</span>
                 </div>
                 <div className="flex items-center">
-                  <ClipboardPenLine className="h-4 w-4 mt-[2px] mr-1" />
-                  <span className="text-sm">
-                    등대-근처의-한인-주택-JrUPwkbIIx8
-                  </span>
+                  <ClipboardPenLine className="h-4 w-4 min-w-4 mt-[2px] mr-1" />
+                  <span className="text-sm">{data.alt_description}</span>
                 </div>
                 <div className="flex items-center">
-                  <AlignLeft className="h-4 w-4 mt-[2px] mr-1" />
+                  <AlignLeft className="h-4 w-4 min-w-4 mt-[2px] mr-1" />
                   <span className="text-sm">
-                    등대-근처의-한인-주택-JrUPwkbIIx8
+                    {data.description
+                      ? data.description
+                      : "등록된 묘사 및 설명글이 없습니다."}
                   </span>
                 </div>
               </div>
               <div className="flex items-center justify-end w-full gap-4">
                 <div className="flex items-center gap-1 text-sm">
                   <p className="leading-7">게시일:</p>
-                  2024-11-15
+                  {data.created_at.split("T")[0]}
                 </div>
                 <div className="flex items-center gap-1 text-sm">
                   <Heart
                     className="h-[14px] w-[14px] mt-[2px] text-rose-600"
                     fill="#e11d48"
                   />
-                  1,000
+                  {data.likes.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
                 </div>
               </div>
             </div>
           </DialogContent>
         </Dialog>
-
         {/* Skeleton UI: 이미지 데이터가 렌더링 되기 전 */}
-        <Skeleton className="w-[250px] h-[150px] rounded-xl" />
+        {/* <Skeleton className="w-[250px] h-[150px] rounded-xl" /> */}
+        {/* 이미지 데이터가 렌더링 된 후 */}
+        <img
+          src={data.urls.small}
+          alt={data.alt_description}
+          className="w-[250px] h-[150px] rounded-xl object-cover"
+        />
         <small className="w-full gap-1 text-s font-medium line-clamp-2">
-          조회한 이미지에 대한 설명란입니다. 조회한 이미지에 대한 설명란입니다.
-          조회한 이미지에 대한 설명란입니다.
+          {data.description
+            ? data.description
+            : "등록된 묘사 및 설명글이 없습니다."}
         </small>
       </div>
       <div className="space-y-2">
@@ -104,7 +165,7 @@ function ImageCard() {
           {/* 게시일 */}
           <div className="flex items-center gap-1 text-sm">
             <span className="leading-7">게시일:</span>
-            2024-11-15
+            {data.created_at.split("T")[0]}
           </div>
           {/* 좋아요 수 */}
           <div className="flex items-center gap-1 text-sm">
@@ -112,7 +173,7 @@ function ImageCard() {
               className="h-[14px] w-[14px] mt-[2px] text-rose-600"
               fill="#e11d48"
             />
-            1,000
+            {data.likes.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
           </div>
         </div>
       </div>
