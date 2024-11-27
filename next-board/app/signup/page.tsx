@@ -3,13 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAtom } from "jotai";
-import { userAtom } from "@/stores/atoms";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import useEmailCheck from "@/hooks/use-email";
 /** UI 컴포넌트 */
-import { FindPasswordPopup } from "@/components/common";
 import {
   Button,
   Card,
@@ -23,10 +20,9 @@ import {
 } from "@/components/ui";
 import { Eye, EyeOff } from "@/public/assets/icons";
 
-function LoginPage() {
+function SignUpPage() {
   const supabase = createClient();
   const router = useRouter();
-  const [_user, setUser] = useAtom(userAtom);
   const { checkEmail } = useEmailCheck();
   /** 회원가입에 필요한 상태 값 */
   const [email, setEmail] = useState<string>("");
@@ -35,7 +31,7 @@ function LoginPage() {
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const togglePassword = () => setShowPassword((prevState) => !prevState);
 
-  const handleLogin = async () => {
+  const signUpNewUser = async () => {
     if (!email || !password) {
       toast({
         variant: "destructive",
@@ -54,8 +50,17 @@ function LoginPage() {
       return; // 이메일 형식이 잘못된 경우, 추가 작업을 하지 않고 리턴
     }
 
+    if (password.length < 8) {
+      toast({
+        variant: "destructive",
+        title: "비밀번호는 최소 8자 이상이어야 합니다.",
+        description: "우리의 정보는 소중하니까요! 보안에 신경쓰자구요!",
+      });
+      return; // 비밀번호 길이가 8이하 일 경우, 추가 작업을 하지 않고 리턴
+    }
+
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signUp({
         email: email,
         password: password,
       });
@@ -68,25 +73,12 @@ function LoginPage() {
         });
       } else if (data && !error) {
         toast({
-          title: "로그인을 성공하였습니다.",
-          description: "자유롭게 TASK 관리를 해주세요!",
+          title: "회원가입을 성공하였습니다.",
+          description: "로그인 페이지로 이동하여 로그인을 진행해주세요.",
         });
-
-        /** 쿠키에 저장할 user 데이터 */
-        const userData = {
-          id: data.user?.id || "",
-          email: data.user?.email || "",
-          phone: data.user?.phone || "",
-          imgUrl: "/assets/images/profile.jpg",
-        };
-        document.cookie = `user=${JSON.stringify(userData)}; path=/; max-age=3600`; // 1시간 동안 유효
-
-        // Jotai의 user에 관련된 상태 값을 업데이트
-        setUser(userData);
-        router.push("/board"); // 로그인 페이지로 이동
+        router.push("/"); // 로그인 페이지로 이동
       }
     } catch (error) {
-      console.log("catch에서 걸림");
       /** 네트워크 오류나 예기치 않은 에러를 잡기 위해 catch 구문 사용 */
       console.error(error);
       toast({
@@ -117,12 +109,16 @@ function LoginPage() {
         </div>
         <Card className="w-[400px]">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl">로그인</CardTitle>
+            <CardTitle className="text-2xl">회원가입</CardTitle>
             <CardDescription>
-              로그인을 위한 정보를 입력해주세요.
+              계정을 생성하기 위해 아래 정보를 입력해주세요.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6">
+            {/* <div className="grid gap-2">
+                            <Label htmlFor="email">휴대폰 번호</Label>
+                            <Input id="phone_number" placeholder="휴대폰 번호를 입력하세요." required />
+                        </div> */}
             <div className="grid gap-2">
               <Label htmlFor="email">이메일</Label>
               <Input
@@ -135,14 +131,7 @@ function LoginPage() {
               />
             </div>
             <div className="relative grid gap-2">
-              <div className="flex items-center">
-                <Label htmlFor="password">비밀번호</Label>
-                <FindPasswordPopup>
-                  <p className="ml-auto inline-block text-sm underline cursor-pointer">
-                    비밀번호를 잊으셨나요?
-                  </p>
-                </FindPasswordPopup>
-              </div>
+              <Label htmlFor="password">비밀번호</Label>
               <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
@@ -153,7 +142,7 @@ function LoginPage() {
               />
               <Button
                 size={"icon"}
-                className="absolute top-[38px] right-2 -translate-y-1/4 bg-transparent hover:bg-transparent"
+                className="absolute top-8 right-2 -translate-y-1/4 bg-transparent hover:bg-transparent"
                 onClick={togglePassword}
               >
                 {showPassword ? (
@@ -170,21 +159,30 @@ function LoginPage() {
             </div>
             <div className="relative flex justify-center text-xs uppercase">
               <span className="bg-background px-2 text-muted-foreground">
-                Or continue with
+                간편 회원가입을 원하시면 이전 버튼을 누르세요.
               </span>
             </div>
           </div>
-          <CardFooter className="flex flex-col mt-6">
-            <Button
-              className="w-full text-white bg-[#E79057] hover:bg-[#E26F24] hover:ring-1 hover:ring-[#E26F24] hover:ring-offset-1 active:bg-[#D5753D] hover:shadow-lg"
-              onClick={handleLogin}
-            >
-              로그인
-            </Button>
-            <div className="mt-4 text-center text-sm">
-              계정이 없으신가요?
-              <Link href={"/signup"} className="underline text-sm ml-1">
+          <CardFooter className="w-full flex flex-col mt-6">
+            <div className="w-full flex items-center gap-4">
+              <Button
+                variant={"outline"}
+                className="w-full"
+                onClick={() => router.push("/")}
+              >
+                이전
+              </Button>
+              <Button
+                className="w-full text-white bg-[#E79057] hover:bg-[#E26F24] hover:ring-1 hover:ring-[#E26F24] hover:ring-offset-1 active:bg-[#D5753D] hover:shadow-lg"
+                onClick={signUpNewUser}
+              >
                 회원가입
+              </Button>
+            </div>
+            <div className="mt-4 text-center text-sm">
+              이미 계정이 있으신가요?{" "}
+              <Link href={"/"} className="underline text-sm ml-1">
+                로그인
               </Link>
             </div>
           </CardFooter>
@@ -194,4 +192,4 @@ function LoginPage() {
   );
 }
 
-export default LoginPage;
+export default SignUpPage;

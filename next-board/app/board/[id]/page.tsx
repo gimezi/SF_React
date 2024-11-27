@@ -1,238 +1,217 @@
 "use client";
 
 import Image from "next/image";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import { nanoid } from "nanoid";
+import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { useToast } from "@/hooks/use-toast";
-/** FSD 컴포넌트 */
-import { AlertPopup, CardBoard } from "@/features";
-import { Button, SearchBar, Progress, LabelDatePicker } from "@/components/ui";
-import { ChevronLeft } from "lucide-react";
+import { useCreateBoard, useGetTaskById, useGetTasks } from "@/hooks/api";
+import { toast } from "@/hooks/use-toast";
+import { nanoid } from "nanoid";
+/** UI 컴포넌트 */
+import { DeleteTaskPopup, BoardCard } from "@/components/common";
+import { Button, Progress, LabelDatePicker } from "@/components/ui";
+import { ChevronLeft } from "@/public/assets/icons";
 /** 스타일 */
 import styles from "./page.module.scss";
 /** 타입 */
-import { Task, BoardContent } from "@/features/board/types";
+import { Board } from "@/types";
 
-function BoardPage() {
-  const pathname = usePathname();
-  const { toast } = useToast();
-  /** Supabase 'todos' 테이블에서 사용될 각 ROW 데이터 COLUMN */
-  const [title, setTitle] = useState<string>(""); // 필수 값 처리 예정
-  const [startDate, setStartDate] = useState<Date>(new Date()); // 필수 값 처리 예정
-  const [endDate, setEndDate] = useState<Date>(new Date()); // 필수 값 처리 예정
-  const [task, setTask] = useState<Task | null>(null); // 필수 값으로 처리할 지 안할 지 추후 고민
+function BoardDetailPage() {
+  const { id } = useParams();
+  const router = useRouter();
+  const { getTasks } = useGetTasks();
+  const { task } = useGetTaskById(Number(id)); // 특정 id 값에 따른 TASK 데이터
+  const createBoard = useCreateBoard();
 
-  /** 저장 버튼 클릭 시 */
-  const onSave = async () => {
-    try {
-      if (!title || startDate || endDate) {
-        toast({
-          variant: "destructive",
-          title: "기입되지 않은 데이터(값)가 있습니다.",
-          description: "수정한 TODO-LIST의 마감일을 꼭 지켜주세요!",
-        });
-      } else {
-        const { status } = await supabase
-          .from("todos")
-          .update({ title: title, start_date: startDate, end_date: endDate })
-          .eq("id", Number(pathname.split("/")[2]));
+  /** Board Page에서 사용되는 상태값 */
+  const [title, setTitle] = useState("");
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [count, setCount] = useState<number>(0);
+  const [boards, setBoards] = useState<Board[]>([]);
 
-        if (status === 204) {
-          toast({
-            title: "TODO-LIST 수정을 완료하였습니다.",
-            description: "수정한 TODO-LIST의 마감일을 꼭 지켜주세요!",
-          });
-          getData(); // 데이터 갱신
-        }
-      }
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  /** Add New Board 버튼을 클릭 시 */
-  const createBoard = () => {
-    let newBoards: BoardContent[] = [];
-    const boardContent = {
-      boardId: nanoid(),
-      isCompleted: false,
+  /** Board Card 생성 및 데이터베이스에 저장 */
+  const handleAddBoard = () => {
+    const newBoard: Board = {
+      id: nanoid(),
       title: "",
-      startDate: "",
-      endDate: "",
+      startDate: undefined,
+      endDate: undefined,
       content: "",
+      isCompleted: false,
     };
+    const newBoards = [...boards, newBoard];
 
-    /** Supabase에 만약 데이터가 있을 때 */
-    if (task !== null && task.boards.length > 0) {
-      newBoards = [...task.boards];
-      newBoards.push(boardContent);
-      updateBoards(newBoards);
-    } else if (task !== null && task?.boards.length === 0) {
-      /** Supabase에 만약 데이터가 없을 때 */
-      newBoards.push(boardContent);
-      updateBoards(newBoards);
-    }
+    setBoards(newBoards);
+    createBoard(Number(id), "boards", newBoards);
   };
 
-  const updateBoards = async (newBoards: BoardContent[]) => {
-    try {
-      const { status, error } = await supabase
-        .from("todos")
-        .update({ boards: newBoards })
-        .eq("id", Number(pathname.split("/")[2]));
+  const handleSave = async () => {
+    if (!title || !startDate || !endDate) {
+      toast({
+        variant: "destructive",
+        title: "기입되지 않은 데이터(값)가 있습니다.",
+        description: "제목, 시작일, 종료일은 필수 값입니다.",
+      });
+      return;
+    }
 
-      if (status === 204) {
+    try {
+      const { data, status, error } = await supabase
+        .from("tasks")
+        .update({
+          title: title,
+          start_date: startDate,
+          end_date: endDate,
+        })
+        .eq("id", id)
+        .select();
+
+      if (data !== null && status === 200) {
         toast({
-          title: "새로운 TODO-BOARD가 생성되었습니다.",
-          description: "생성한 TODO-BOARD를 예쁘게 꾸며주세요.",
+          title: "TASK 저장을 완료하였습니다.",
+          description: "수정한 TASK의 마감일을 꼭 지켜주세요!",
         });
-        getData(); // 데이터 갱신
+        // 서버에서 데이터 갱신 후 상태값을 업데이트
+        // Aside-Section의 리스트 정보를 실시간으로 업데이트 하기 위해
+        getTasks();
       }
 
       if (error) {
-        console.error(error);
         toast({
           variant: "destructive",
           title: "에러가 발생했습니다.",
-          description: "개발자 도구창을 확인하세요.",
+          description: `Supabase 오류: ${error.message || "알 수 없는 오류"}`,
         });
       }
     } catch (error) {
-      console.log(error);
-    }
-  };
-
-  /** Supabase 데이터베이스의(기존에 생성한 페이지에) 데이터 유무 체크 */
-  const getData = async () => {
-    const { data } = await supabase.from("todos").select("*"); // 전체 조회
-
-    if (data !== null) {
-      data.forEach((task: Task) => {
-        if (task.id === Number(pathname.split("/")[2])) {
-          setTask(task);
-          setTitle(task.title);
-        }
+      /** 네트워크 오류나 예기치 않은 에러를 잡기 위해 catch 구문 사용 */
+      console.error(error);
+      toast({
+        variant: "destructive",
+        title: "네트워크 오류",
+        description: "서버와 연결할 수 없습니다. 다시 시도해주세요!",
       });
     }
   };
 
+  /** task가 로드되면, 상태값 업데이트 */
   useEffect(() => {
-    getData();
-  }, []);
+    if (task) {
+      setTitle(task.title || "");
+      setStartDate(task.start_date ? new Date(task.start_date) : undefined);
+      setEndDate(task.end_date ? new Date(task.end_date) : undefined);
+      setBoards(task.boards);
+    }
+  }, [task]);
+
+  useEffect(() => {
+    if (task?.boards) {
+      const completedCount = task.boards.filter(
+        (board: Board) => board.isCompleted
+      ).length;
+      setCount(completedCount);
+    }
+  }, [task?.boards]);
 
   return (
-    <div className="page">
-      <aside className="page__aside">
-        {/* 검색창 UI */}
-        <SearchBar placeholder="검색어를 입력하세요." />
-        {/* Add New Page 버튼 UI */}
-        <Button className="text-[#E79057] bg-white border border-[#E79057] hover:bg-[#FFF9F5]">
-          Add New Page
-        </Button>
-        {/* TODO 목록 UI 하나 */}
-        <div className="flex flex-col mt-4 gap-2">
-          <small className="text-sm font-medium leading-none text-[#A6A6A6]">
-            9Diin의 TODO-LIST
-          </small>
-          <ul className="flex flex-col">
-            <li className="flex items-center gap-2 py-2 px-[10px] bg-[#F5F5F5] rounded-sm text-sm">
-              <div className="h-[6px] w-[6px] rounded-full bg-[#00F38D]"></div>
-              Enter Title
-            </li>
-            <li className="flex items-center gap-2 py-2 px-[10px] bg-[#F5F5F5] rounded-sm text-sm">
-              <div className="h-[6px] w-[6px] rounded-full bg-[#00F38D]"></div>
-              Enter Title
-            </li>
-          </ul>
-        </div>
-      </aside>
-      <main className="page__main">
-        <div className={styles.header}>
-          <div className={styles[`header__btn-box`]}>
-            <Button variant={"outline"} size={"icon"}>
-              <ChevronLeft />
+    <>
+      <div className={styles.header}>
+        <div className={styles[`header__btn-box`]}>
+          <Button
+            variant={"outline"}
+            size={"icon"}
+            onClick={() => router.push("/")}
+          >
+            <ChevronLeft />
+          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant={"secondary"} onClick={handleSave}>
+              저장
             </Button>
-            <div className="flex items-center gap-2">
-              <Button variant={"secondary"} onClick={onSave}>
-                저장
+            <DeleteTaskPopup>
+              <Button className="text-rose-600 bg-red-50 hover:bg-rose-50">
+                삭제
               </Button>
-              <AlertPopup>
-                <Button className="text-rose-600 bg-red-50 hover:bg-rose-50">
-                  삭제
-                </Button>
-              </AlertPopup>
-            </div>
+            </DeleteTaskPopup>
           </div>
-          <div className={styles.header__top}>
-            {/* 제목 입력 Input 섹션 */}
-            <input
-              type="text"
-              placeholder="Enter Title Here!"
-              className={styles.header__top__input}
-              onChange={(event) => setTitle(event.target.value)} // title 상태값 갱신
-              value={title}
+        </div>
+        <div className={styles.header__top}>
+          {/* 제목 입력 Input 섹션 */}
+          <input
+            type="text"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            placeholder="Enter Title Here!"
+            className={styles.header__top__input}
+          />
+          {/* 진행상황 척도 그래프 섹션 */}
+          <div className="flex items-center justify-start gap-4">
+            <small className="text-sm font-medium leading-none text-[#6D6D6D]">
+              {count}/{task?.boards.length} Completed
+            </small>
+            <Progress
+              className="w-60 h-[10px]"
+              value={
+                task && task.boards.length > 0
+                  ? (count / task.boards.length) * 100
+                  : 0
+              }
             />
-            {/* 진행상황 척도 그래프 섹션 */}
-            <div className="flex items-center justify-start gap-4">
-              <small className="text-sm font-medium leading-none text-[#6D6D6D]">
-                1/10 Completed
-              </small>
-              <Progress className="w-60 h-[10px]" value={33} />
-            </div>
-          </div>
-          {/* 캘린더 + Add New Board 버튼 섹션 */}
-          <div className={styles.header__bottom}>
-            <div className="flex items-center gap-5">
-              <LabelDatePicker label={"From"} />
-              <LabelDatePicker label={"To"} />
-            </div>
-            <Button
-              className="text-white bg-[#E79057] hover:bg-[#E26F24] hover:ring-1 hover:ring-[#E26F24] hover:ring-offset-1 active:bg-[#D5753D] hover:shadow-lg"
-              onClick={createBoard}
-            >
-              Add New Board
-            </Button>
           </div>
         </div>
-        <div className={styles.body}>
-          {task?.boards.length === 0 ? (
-            <div className={styles.body__noData}>
-              {/* Add New Board 버튼 클릭으로 인한 Board 데이터가 없을 경우 */}
-              <h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">
-                There is no board yet.
-              </h3>
-              <small className="text-sm font-medium leading-none text-[#6D6D6D] mt-3 mb-7">
-                Click the button and start flashing!
-              </small>
-              <button onClick={createBoard}>
-                <Image
-                  src="/assets/images/button.svg"
-                  width={74}
-                  height={74}
-                  alt="rounded-button"
-                />
-              </button>
-            </div>
-          ) : (
-            <div className={styles.body__isData}>
-              {/* Add New Board 버튼 클릭으로 인한 Board 데이터가 있을 경우 */}
-              {task?.boards.map((board: BoardContent) => {
-                return (
-                  <CardBoard
-                    key={board.boardId}
-                    data={board}
-                    handleBoards={setTask}
-                  />
-                );
-              })}
-            </div>
-          )}
+        {/* 캘린더 + Add New Board 버튼 섹션 */}
+        <div className={styles.header__bottom}>
+          <div className="flex items-center gap-5">
+            <LabelDatePicker
+              label={"From"}
+              value={startDate}
+              onChange={setStartDate}
+            />
+            <LabelDatePicker
+              label={"To"}
+              value={endDate}
+              onChange={setEndDate}
+            />
+          </div>
+          <Button
+            className="text-white bg-[#E79057] hover:bg-[#E26F24] hover:ring-1 hover:ring-[#E26F24] hover:ring-offset-1 active:bg-[#D5753D] hover:shadow-lg"
+            onClick={handleAddBoard}
+          >
+            Add New Board
+          </Button>
         </div>
-      </main>
-    </div>
+      </div>
+      <div className={styles.body}>
+        {boards.length !== 0 ? (
+          <div className={styles.body__isData}>
+            {/* Add New Board 버튼 클릭으로 인한 Board 데이터가 있을 경우 */}
+            {boards.map((board: Board) => {
+              return <BoardCard key={board.id} board={board} />;
+            })}
+          </div>
+        ) : (
+          <div className={styles.body__noData}>
+            {/* Add New Board 버튼 클릭으로 인한 Board 데이터가 없을 경우 */}
+            <h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">
+              There is no board yet.
+            </h3>
+            <small className="text-sm font-medium leading-none text-[#6D6D6D] mt-3 mb-7">
+              Click the button and start flashing!
+            </small>
+            <button onClick={handleAddBoard}>
+              <Image
+                src="/assets/images/button.svg"
+                width={74}
+                height={74}
+                alt="rounded-button"
+              />
+            </button>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
-export default BoardPage;
+export default BoardDetailPage;
